@@ -4,7 +4,7 @@
   "private": true,
   "dependencies": {
     "axios": "^0.18.0",
-    "jquery": "^1.9.1",  
+    "jquery": ">=3.4.0",  
     "popper": "^1.0.1",         
     "react": "^16.5.2",    
     "react-dom": "^16.5.2",
