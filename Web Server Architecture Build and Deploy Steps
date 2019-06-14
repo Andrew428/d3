@@ -1,0 +1,200 @@
+Deploy SSL WebSite Steps:
+1. Registrar a domain name for you Web Site. 
+
+2. AWS Certificate manager and Request SSL Certificate
+
+3. Create AWS S3 bucket and set to Access so object can be public
+
+4. Upload production Build files.
+
+5. Create AWS CloudFront Distribution 
+
+6. Set up two A - IPv4 address and the CNAME in AWS Route 53
+	A - IPv4 address: 
+		- Select Alias Yes
+		- Select CloudFront option from dropdown
+
+	CNAME:
+		- Use this to set the SSL Certificate values
+
+Note: May take up to 2 day for SSL Certificate to kick in.  
+
+Cost:
+Domain Name: 
+	Typically $10 - $40 per year depending on the domain name
+
+Deploy Node.js WebServer on AWS EC2 and connect to MongoDB Atlas: 
+1. Registrar a domain name for you Web Server. 
+
+2.  Set up security group if not you don’t have one already.  (Ensure all ports are open for inbound traffic)
+
+2. Launch EC2 basic instance:  
+	- Go to AWS Instances.
+	- Lunch Instance and follow default set up for Ubuntu 18.0.4 set up.
+
+3. Allocate new Elastic IP address:  
+	- Go to Elastic IP
+	- Click allocate new Address the associate address with the new EC2 instance created in the previous step.
+
+3. Set up two A - IPv4 address in AWS Route 53 with the value set to the Elastic IP set in the previous set
+
+4. Now you should be able to SSH in.  
+	- chmod 400 <YOUR-KEY-PAIR>.pem
+	- ssh -I ~/.ssh/<YOUR-KEY-PAIR>.pem ubuntu@34.192.16.19
+
+5. Set up nignx:
+    sudo wget http://nginx.org/keys/nginx_signing.key
+	sudo apt-key add nginx_signing.key
+	cd /etc/apt
+	sudo nano sources.list
+
+	At the bottom of that file, append it with:
+
+#
+deb http://nginx.org/packages/ubuntu xenial nginx
+deb-src http://nginx.org/packages/ubuntu xenial nginx
+#
+
+
+	Save the file then:
+	sudo apt-get update
+	sudo apt-get install nginx
+
+ 	Then start NGINX:
+	sudo service nginx start
+
+6. Set up Let’s Encrypt:
+	sudo apt-get update
+	sudo apt-get install software-properties-common
+	sudo add-apt-repository ppa:certbot/certbot
+	sudo apt-get update
+	sudo apt-get install python-certbot-nginx
+
+7.  Update Nginx config file:
+	sudo nano /etc/nginx/conf.d/default.conf
+	Next to “server_name”, replace “localhost” with your “api.reallo.io” and the “www.api.reallo.io” and Save the file
+
+
+8. Get SSL certification:	
+    	sudo certbot --nginx -d api.reallo.io -d www.api.reallo.io
+	sudo certbot --nginx -d youtube.andrewvc.net -d www.youtube.andrewvc.net
+	sudo certbot --nginx -d weather.andrewvc.net -d www.weather.andrewvc.net
+	 Follow septs until you get success message
+
+9. Create new Nginx config file:
+	cd /etc/nginx/conf.d
+	sudo mv default.conf default.conf.bak
+	sudo touch server.conf
+	sudo nano server.conf	
+
+	Add the following to the file and replace api.reallo.io with your domain:
+#
+server {
+listen 80;
+listen [::]:80;
+server_name weather.andrewvc.net www.weather.andrewvc.net;
+return 301 https://$server_name$request_uri;
+}
+
+server {
+listen 443 ssl http2 default_server;
+listen [::]:443 ssl http2 default_server;
+server_name weather.andrewvc.net www.weather.andrewvc.net;
+
+location / {
+	# proxy_pass http://localhost:3000;
+	# proxy_pass http://localhost:5000;
+	# proxy_pass http://<priviteIP>:<port>;
+	proxy_pass http://172.31.39.175:5000;
+}
+
+ssl_certificate /etc/letsencrypt/live/weather.andrewvc.net/fullchain.pem;
+ssl_certificate_key /etc/letsencrypt/live/weather.andrewvc.net/privkey.pem;
+ssl_protocols TLSv1 TLSv1.1 TLSv1.2;
+ssl_prefer_server_ciphers on;
+ssl_ciphers EECDH+CHACHA20:EECDH+AES128:RSA+AES128:EECDH+AES256:RSA+AES256:EECDH+3DES:RSA+3DES:!MD5;
+
+ssl_session_cache shared:SSL:5m;
+ssl_session_timeout 1h;
+add_header Strict-Transport-Security “max-age=15768000” always;
+}
+#
+
+10. Reload nginx:
+	sudo nginx -s reload
+
+
+11. nodejs and build essentials
+	sudo apt-get install -y build-essential openssl libssl-dev pkg-config
+	sudo apt-get install -y nodejs 
+	sudo apt-get install npm -y
+	# sudo npm cache clean -f
+	sudo npm install -g n
+	sudo n stable
+
+12. Install Yarn
+	curl -sS https://dl.yarnpkg.com/debian/pubkey.gpg | sudo apt-key add -
+	echo "deb https://dl.yarnpkg.com/debian/ stable main" | sudo tee /etc/apt/sources.list.d/yarn.list
+	sudo apt update
+	sudo apt install yarn
+	yarn --version
+
+13. Then git clone this repo I created for a simple Node and Express server:
+	cd to root and git clone https://github.com/andrew428/<some-repo>
+
+
+14. cd to client and run yarn then yarn build
+
+
+16.  cd to server and run yarn and node start server.js 
+
+17. Auto renew cert:
+    sudo certbot renew --dry-run
+
+18. Add pm2
+	sudo npm i pm2 -g
+
+Typical Cost:
+Domain Name: 
+	Typically $10 - $40 per year depending on the domain name
+
+Amazon Elastic Compute Cloud running Linux/UNIX:
+	$0.0116 per On Demand Linux t2.micro Instance Hour
+
+EB:
+	$0.10 per GB-month of General Purpose SSD (gp2) provisioned storage - US East (Northern Virginia)
+
+Elastic IP Addresse:
+	$0.00 per Elastic IP address not attached to a running instance for the first hour
+
+Elastic Load Balancing - Classi:
+	$0.025 per LoadBalancer-hour (or partial hour)
+
+Set Up MongoDB Atlas:
+1. Create an Atlas MongoDb Account and spin up a Project.  (Atlas M2 or greater)
+
+2. Set up Peering and connect to AWS Elastic IP/VPC that is use for you web server
+	- Follow the steps.
+
+Cost:
+M2 Atlas Server: 
+	$9 per month
+
+Total Cost:
+	Initial: 
+		$20 - $80  - for domain names
+	Domain Renewal: 
+		$20 - $80 per year
+	Monthly: 
+		MongoDB Atlas (M2):
+			$9 per month - $0.012/hour (Excludes variable data transfer, backup, and taxes.)
+		Web Server Monthly Cost: 
+			Amazon Elastic Compute Cloud running Linux/UNIX:
+				$0.0116 per On Demand Linux t2.micro Instance Hour
+			EB:
+				$0.10 per GB-month of General Purpose SSD (gp2) provisioned storage - US East (Northern Virginia)
+			Elastic IP Addresse:
+				$0.00 per Elastic IP address not attached to a running instance for the first hour
+			Elastic Load Balancing - Classi:
+				$0.025 per LoadBalancer-hour (or partial hour)
+

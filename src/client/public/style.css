@@ -1,0 +1,27 @@
+html, body{
+    height:100vh !important;
+    width:100vw !important;    
+}
+.input-group {
+    width:90vw;
+    margin: 30px auto;
+}
+
+input:focus{
+    border: 1px solid grey !important;
+}
+
+.has-error{
+    border: 1px solid red !important;
+}
+
+.has-error:focus{
+    border: 1px solid red !important;
+}
+
+
+ul {
+    list-style-type: none;
+    padding: 0;
+}
+
